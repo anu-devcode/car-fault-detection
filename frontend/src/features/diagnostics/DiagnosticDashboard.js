@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -170,6 +171,7 @@ export default function DiagnosticDashboard() {
                     </motion.div>
                     <div>
                       <h1>Engine Sound Checker</h1>
+                      <Link href="/hub">Open the Ethiopia car care hub</Link>
                       <div
                         className="mobile-hide"
                         style={{

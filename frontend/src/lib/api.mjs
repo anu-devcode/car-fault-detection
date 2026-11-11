@@ -35,3 +35,10 @@ export async function uploadAudio(file) {
 
 export const getClasses = () => request('/classes')
 export const healthCheck = () => request('/')
+
+export const getCareAdvice = (data) =>
+  request('/care/triage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })

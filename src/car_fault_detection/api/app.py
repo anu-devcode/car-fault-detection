@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 
 from car_fault_detection import config
+from car_fault_detection.api.care import router as care_router
+from car_fault_detection.care.guidance import CareRequest, build_advice
 
 logger = logging.getLogger(__name__)
 MAX_AUDIO_SIZE_BYTES = 5 * 1024 * 1024
@@ -44,6 +46,7 @@ def create_app(detector_factory: Callable = load_detector) -> FastAPI:
         title="Car Engine Fault Detection API", version="0.2.0", lifespan=lifespan
     )
     application.state.detector = None
+    application.include_router(care_router)
     origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
     application.add_middleware(
         CORSMiddleware,
@@ -107,6 +110,11 @@ def create_app(detector_factory: Callable = load_detector) -> FastAPI:
                 "location": prediction.location,
                 "is_normal": prediction.fault_class.casefold() == "normal",
                 "confidence": prediction.confidence,
+                "advice": build_advice(
+                    CareRequest(
+                        fault_class=prediction.fault_class, confidence=prediction.confidence
+                    )
+                ),
             }
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="Unable to decode valid audio.") from exc

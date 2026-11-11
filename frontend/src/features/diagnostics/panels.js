@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Activity, BarChart3 } from 'lucide-react'
 import { formatConfidence, sessionStatistics } from '../../lib/metrics.mjs'
@@ -14,6 +15,17 @@ export function ResultCard({ result }) {
           <div className="diag-label">{result.is_normal ? 'Normal pattern' : 'Fault pattern'}</div>
           <div className="diag-value">{result.fault_class}</div>
           <p>{result.location}</p>
+          {result.advice && (
+            <div className="care-summary">
+              <strong>{result.advice.heading}</strong>
+              <ul>
+                {result.advice.immediate_actions.map((action) => (
+                  <li key={action}>{action}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Link href="/hub">Get care guidance and find garage assistance</Link>
           <div className="hud-title">Model confidence</div>
           <div className="diag-value" style={{ fontSize: '1.5rem' }}>
             {confidence}
