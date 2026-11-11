@@ -53,3 +53,10 @@ same source-separated, legally usable data and latency/memory budget. The existi
 already pretrained on car sounds; it is the first inexpensive transfer-learning baseline.
 AST/CLAP are general pretrained audio candidates, not validated automotive diagnostics.
 Broad vehicle-photo models offer possible identities; they cannot know everything about a car.
+
+## Current milestone status
+
+Stages 1 and 2 are implemented. Stage 3 has a completed, non-promoted research pilot with
+96 real recordings and two pretrained encoders. Stage 4 has a local candidate-only photo
+prototype. Stage 5 has manual profiles and source links; a full regional catalogue is pending.
+Stages 6 and 7 remain future work. See [development progress](development-progress.md).

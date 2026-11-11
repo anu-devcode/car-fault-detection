@@ -16,6 +16,19 @@ diagnostic accuracy cannot be verified without the original labeled test recordi
 its configured Railway API returned HTTP 404 “Application not found” during the audit.
 See [repository, production, and dataset findings](docs/audit.md).
 
+## Car care hub development
+
+The local `/hub` now includes symptom-aware recommendations, safe immediate owner actions,
+Ethiopia garage/towing map searches, optional photo-based vehicle candidates, and manual vehicle
+profiles with official source links. These are development features; photo matches are not
+verified identities and audio results do not establish driving safety.
+
+A real research-only transfer-learning pilot has been run on 96 sourced recordings. Pretrained
+AST features performed better than the existing CRNN features in that small comparison, but
+neither result establishes production readiness. See [development progress](docs/development-progress.md),
+[the research model card](research/transfer-comparison/MODEL_CARD.md), and [the roadmap](docs/roadmap.md).
+Git pushes are for development; hosting deployment guards remain enabled.
+
 ## Repository layout
 
 ```text

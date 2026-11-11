@@ -42,3 +42,16 @@ export const getCareAdvice = (data) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
+
+export const photoModelStatus = () => request('/vehicles/vision/status')
+export const vehicleResources = (profile) =>
+  request('/vehicles/resources', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(profile),
+  })
+export async function identifyVehicle(file) {
+  const body = new FormData()
+  body.append('file', file)
+  return request('/vehicles/identify', { method: 'POST', body })
+}

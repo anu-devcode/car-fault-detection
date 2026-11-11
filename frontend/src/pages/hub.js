@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { getCareAdvice } from '../lib/api.mjs'
 import { garageSearch } from '../lib/garages.mjs'
 import styles from '../styles/hub.module.css'
+import VehiclePanel from '../features/vehicles/VehiclePanel'
 
 const symptomOptions = [
   ['smoke_or_fire', 'Smoke or suspected fire'],
@@ -194,17 +195,7 @@ export default function CarHub() {
             price directly. This app does not verify listings or make bookings.
           </p>
         </section>
-        <section className={styles.card} id="vehicle-profile">
-          <h2>Know your vehicle</h2>
-          <p>
-            Photo identification and a confirmation-first vehicle profile are the next development
-            milestone. A photograph cannot verify a VIN, engine, trim, maintenance history or hidden
-            damage.
-          </p>
-          <p>
-            Keep your exact owner’s manual and vehicle documents available when discussing a repair.
-          </p>
-        </section>
+        <VehiclePanel />
       </div>
     </main>
   )

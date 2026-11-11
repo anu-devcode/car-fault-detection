@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from car_fault_detection import config
 from car_fault_detection.api.care import router as care_router
+from car_fault_detection.api.vehicles import router as vehicle_router
 from car_fault_detection.care.guidance import CareRequest, build_advice
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,14 @@ ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".aac", ".ogg", ".flac", ".w
 
 
 def load_detector():
+    if os.environ.get("AUDIO_MODEL_BACKEND") == "research_ast":
+        if os.environ.get("ALLOW_RESEARCH_MODELS") != "true":
+            raise ValueError("Research audio models require explicit local opt-in")
+        from car_fault_detection.ml.research_inference import ResearchASTDetector
+
+        return ResearchASTDetector(
+            os.environ.get("RESEARCH_AUDIO_MODEL_DIR", "research/transfer-comparison")
+        )
     # Keep imports lazy so health/configuration tools do not initialize PyTorch.
     from car_fault_detection.ml.inference import EngineFaultDetector
 
@@ -31,7 +40,18 @@ def load_detector():
     )
 
 
-def create_app(detector_factory: Callable = load_detector) -> FastAPI:
+def load_vehicle_recognizer():
+    directory = os.environ.get("VISION_MODEL_DIR")
+    if not directory:
+        return None
+    from car_fault_detection.vehicles.vision import VehicleRecognizer
+
+    return VehicleRecognizer(directory)
+
+
+def create_app(
+    detector_factory: Callable = load_detector, vehicle_factory: Callable = load_vehicle_recognizer
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
@@ -39,14 +59,22 @@ def create_app(detector_factory: Callable = load_detector) -> FastAPI:
         except Exception:
             logger.exception("Model initialization failed; prediction service is unavailable")
             application.state.detector = None
+        try:
+            application.state.vehicle_recognizer = await run_in_threadpool(vehicle_factory)
+        except Exception:
+            logger.exception("Photo model initialization failed; manual vehicle entry is available")
+            application.state.vehicle_recognizer = None
         yield
         application.state.detector = None
+        application.state.vehicle_recognizer = None
 
     application = FastAPI(
         title="Car Engine Fault Detection API", version="0.2.0", lifespan=lifespan
     )
     application.state.detector = None
+    application.state.vehicle_recognizer = None
     application.include_router(care_router)
+    application.include_router(vehicle_router)
     origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
     application.add_middleware(
         CORSMiddleware,
@@ -67,6 +95,7 @@ def create_app(detector_factory: Callable = load_detector) -> FastAPI:
     async def health():
         return {
             "status": "running",
+            "model_backend": os.environ.get("AUDIO_MODEL_BACKEND", "crnn"),
             "model": "loaded" if application.state.detector is not None else "not loaded",
             "message": "Car Engine Fault Detection API",
         }
