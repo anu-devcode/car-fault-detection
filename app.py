@@ -1,10 +1,6 @@
-"""Optional Streamlit app entry point."""
+"""Compatibility entry point for `streamlit run app.py`."""
 
+import runpy
+from pathlib import Path
 
-def main() -> None:
-    print("Optional app placeholder.")
-    print("Next: implement upload/live-audio prediction UI with Streamlit.")
-
-
-if __name__ == "__main__":
-    main()
+runpy.run_path(str(Path(__file__).parent / "apps" / "streamlit_app.py"), run_name="__main__")

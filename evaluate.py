@@ -1,20 +1,3 @@
-"""Step 4: evaluate trained model metrics."""
+"""Compatibility entry point; implementation lives in car_fault_detection.ml.evaluate."""
 
-from pathlib import Path
-
-
-MODEL_FILE = Path("data") / "processed" / "model.joblib"
-
-
-def main() -> None:
-    if not MODEL_FILE.exists():
-        print("Missing data/processed/model.joblib.")
-        print("Run train_model.py first.")
-        return
-
-    print("Evaluation entry point ready.")
-    print("Next: report accuracy, confusion matrix, precision, and recall.")
-
-
-if __name__ == "__main__":
-    main()
+from car_fault_detection.ml.evaluate import *  # noqa: F403

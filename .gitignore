@@ -1,32 +1,52 @@
-# Python cache and compiled files
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-
-# Virtual environments
+*$py.class
 .venv/
 venv/
+ENV/
 env/
+.env
+.env.local
 
-# Build / packaging
+# ML Artifacts (Large data/model files - exclude from git)
+/models/
+/results/
+/data/
+/unprocessedData/
+*.pth
+*.joblib
+!frontend/public/*.png
+!frontend/public/*.jpg
+!frontend/public/*.svg
+!frontend/public/*.ico
+
+# Node.js
+node_modules/
+.next/
+out/
 build/
-dist/
-*.egg-info/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Model artifacts and processed outputs
-models/*.pkl
-models/*.joblib
-data/processed/*
-!data/processed/.gitkeep
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS / editor
-.DS_Store
-Thumbs.db
-.vscode/settings.json
+# Packaging, checks, and local secrets
+*.egg-info/
+dist/
+.pytest_cache/
+.ruff_cache/
+.env.*
+!.env.example
