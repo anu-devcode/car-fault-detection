@@ -16,6 +16,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+transfer = ["transformers>=4.56,<5", "huggingface-hub>=0.34,<1", "safetensors>=0.5,<1"]
+vision = ["timm>=1,<2", "pillow>=10,<14", "huggingface-hub>=0.34,<1"]
 training = ["matplotlib>=3.8,<4", "seaborn>=0.13,<1", "pandas>=2.2,<4", "tqdm>=4.66,<5"]
 dashboard = ["streamlit>=1.36,<2", "matplotlib>=3.8,<4"]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.11,<1"]

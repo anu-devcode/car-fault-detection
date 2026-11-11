@@ -1,0 +1,105 @@
+{
+  "status": "research_only_not_promoted",
+  "release_allowed": false,
+  "dataset": "rayyyyy007/kwerimoto-engine-sounds",
+  "dataset_revision": "0335c63789e2ceedfbf521983db59642420864c2",
+  "selection": "real clips only; AudioSet restricted to explicit car tags; deterministic per-split class caps; no real_test use",
+  "counts": {
+    "test/engine_knock": 6,
+    "test/healthy": 6,
+    "test/misfire": 6,
+    "train/engine_knock": 20,
+    "train/healthy": 20,
+    "train/misfire": 20,
+    "validation/engine_knock": 6,
+    "validation/healthy": 6,
+    "validation/misfire": 6
+  },
+  "candidates": {
+    "crnn": {
+      "validation_macro_f1": 0.7410256410256411,
+      "best_epoch": 9,
+      "encoder_revision": "7bab85ff8cf3606c8898290b0b4b753eb3aff82e42f13ad2b8b66cb7d90a2590"
+    }
+  },
+  "selected_encoder": "crnn",
+  "selection_metric": "validation_macro_f1; test labels not used in model selection",
+  "classes": [
+    "engine_knock",
+    "healthy",
+    "misfire"
+  ],
+  "test_confusion_matrix": [
+    [
+      1,
+      2,
+      3
+    ],
+    [
+      0,
+      6,
+      0
+    ],
+    [
+      0,
+      1,
+      5
+    ]
+  ],
+  "test_report": {
+    "engine_knock": {
+      "precision": 1.0,
+      "recall": 0.16666666666666666,
+      "f1-score": 0.2857142857142857,
+      "support": 6.0
+    },
+    "healthy": {
+      "precision": 0.6666666666666666,
+      "recall": 1.0,
+      "f1-score": 0.8,
+      "support": 6.0
+    },
+    "misfire": {
+      "precision": 0.625,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.7142857142857143,
+      "support": 6.0
+    },
+    "accuracy": 0.6666666666666666,
+    "macro avg": {
+      "precision": 0.7638888888888888,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6000000000000001,
+      "support": 18.0
+    },
+    "weighted avg": {
+      "precision": 0.7638888888888888,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6000000000000001,
+      "support": 18.0
+    }
+  },
+  "majority_baseline_test_accuracy": 0.3333333333333333,
+  "head_training": {
+    "seed": 42,
+    "optimizer": "AdamW",
+    "epochs": 100,
+    "learning_rate": 0.003,
+    "frozen_encoder": true,
+    "input": "central 1 second, mono 16 kHz",
+    "standardization": "training split only"
+  },
+  "limitations": [
+    "No Ethiopian vehicle validation",
+    "No mechanic-confirmed ground truth",
+    "Source/acoustic confounding",
+    "Small pilot, not a production benchmark",
+    "Dataset original rights unverified for release",
+    "No non-engine rejection calibration",
+    "Existing CRNN pretraining provenance unknown; pretraining overlap cannot be excluded",
+    "Published labels may reflect source rather than mechanical condition",
+    "AST AudioSet pretraining may overlap pilot clips; no unbiased pretraining-independent benchmark",
+    "Exploratory test inspected during development; not a release lockbox"
+  ],
+  "elapsed_seconds": 10.0
+}
