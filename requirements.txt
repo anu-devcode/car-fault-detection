@@ -1,12 +1,2 @@
-fastapi
-uvicorn
-gunicorn
-python-multipart
-torch
-librosa
-numpy
-scikit-learn
-joblib
-soundfile
-resampy
-scipy
+# Install the package from this checkout; dependency definitions live in pyproject.toml.
+-e .

@@ -4,8 +4,9 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "gunicorn -w 2 -k uvicorn.workers.UvicornWorker backend:app --bind 0.0.0.0:$PORT --timeout 120",
+    "startCommand": "gunicorn -w 1 -k uvicorn.workers.UvicornWorker backend:app --bind 0.0.0.0:$PORT --timeout 120",
     "restartPolicyType": "ON_FAILURE",
-    "numReplicas": 1
+    "numReplicas": 1,
+    "healthcheckPath": "/health"
   }
 }

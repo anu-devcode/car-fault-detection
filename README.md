@@ -1,124 +1,120 @@
-# 🚗 Engine Neural Diagnostic System (ENDS)
-### *A Deep Learning Showcase: From Acoustic Noise to Predictive Maintenance*
+# Car Fault Detection
 
-[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=flat&logo=pytorch&logoColor=white)](https://pytorch.org)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org)
+Audio-based engine fault classification using a PyTorch CRNN, a FastAPI inference service,
+and a Next.js dashboard. This is a research prototype; a prediction does not establish
+whether a vehicle is safe to drive.
 
----
+**Dataset: no dataset is included in this repository.** A model checkpoint and a six-class
+label encoder are tracked. Their architecture compatibility and local inference were checked;
+diagnostic accuracy cannot be verified without the original labeled test recordings.
 
-## 📖 Project Overview
-The **Engine Neural Diagnostic System (ENDS)** is a comprehensive AI solution designed to transform how we diagnose automotive mechanical health. Traditional diagnostics rely on expensive sensors or subjective human hearing. ENDS uses a **Convolutional Recurrent Neural Network (CRNN)** to analyze acoustic signatures, providing an objective, data-driven diagnostic report in seconds.
+**Production:** the [Vercel frontend](https://car-fault-detection.vercel.app/) responds, but
+its configured Railway API returned HTTP 404 “Application not found” during the audit.
+See [repository, production, and dataset findings](docs/audit.md).
 
-> **Objective**: To build a robust, scalable system capable of identifying complex engine faults across various engine models with high generalization and low overfitting.
+## Repository layout
 
----
-
-## 🏗️ The Engineering Journey: 3-Phase Lifecycle
-
-### 📍 Phase 1: The Baseline Foundation
-In the initial stage, we established a basic CRNN architecture. We collected raw audio recordings of various engine faults (bad ignition, low oil, belt slips).
-- **The Challenge**: We encountered a significant "Generalization Gap"—Training accuracy was 76%, but Validation was only 55%.
-- **The Diagnosis**: 
-    1. **Low Spectral Density**: Our `HOP_LENGTH` was too high, leaving 75% of the spectrogram as "dead space".
-    2. **Acoustic Overlap**: Many "Combined Faults" sounded 95% identical, confusing the model.
-    3. **Small Sample Size**: The model was "memorizing" specific recordings rather than learning physics.
-
-### 📍 Phase 2: Optimization & Data Physics (The Pivot)
-We applied advanced Signal Processing and Machine Learning techniques to solve Phase 1 issues.
-- **Technical Fixes**:
-    - **Resolution Correction**: Adjusted `HOP_LENGTH` to 125 to fill the 128x128 feature map.
-    - **Acoustic Grouping**: Simplified the label space into "System Categories" (e.g., Belt & Accessory System) to resolve class confusion.
-    - **Aggressive Augmentation**: Implemented **Pitch Shifting** and **Time Stretching** to simulate different engine sizes and RPMs.
-    - **Data Diversification**: Ingested "Normal" idle sounds from 8 different engine types (Diesel/Petrol, V6/V8) to build a robust baseline.
-
-### 📍 Phase 3: Simple & Clean Dashboard
-The final phase focused on making the AI easy to use with a clear **Engine Sound Checker** interface.
-- **The Result**: A **Next.js 14 Dashboard** featuring:
-    - **Engine HUD**: A clean, easy-to-read screen with simple English labels.
-    - **Live Progress**: Real-time feedback that tells you exactly what the AI is doing.
-    - **Clear Results**: Diagnostic reports that use normal words instead of technical jargon.
-    - **Beautiful Look**: A high-end automotive design that remains professional and modern.
-
----
-
-## 🛠️ Technical Architecture
-
-```mermaid
-graph TD
-    A[Engine Sound] --> B[Neural Core HUD]
-    B --> C[FastAPI Backend]
-    C --> D[Preprocessing: 16kHz Mono]
-    D --> E[Log-Mel Spectrogram Extraction]
-    E --> F[Inference: EngineCRNN Model]
-    F --> G{Decision Core}
-    G --> H[System Healthy]
-    G --> I[Anomaly Detected]
-    I --> J[Actionable Maintenance Report]
+```text
+src/car_fault_detection/
+  api/             # FastAPI application factory and upload/health routes
+  audio/           # Shared audio decoding, augmentation, and mel features
+  ml/              # CRNN architecture, inference, data loaders, training, evaluation
+  data/            # Dataset inventory, organization, and source-data merge utilities
+  config.py        # Shared model settings and environment-based paths
+  training.py      # Offline training orchestration
+  visualization.py # Training plots and existing WAV discovery helper
+frontend/src/
+  pages/           # Next.js route entry points
+  features/diagnostics/ # Dashboard presentation, session hook, and tab panels
+  lib/             # API client, WAV conversion, confidence/statistics utilities
+  styles/          # Global UI styles
+apps/              # Optional local Streamlit application
+scripts/           # Dataset and checkpoint inspection commands
+tests/             # Python API, inventory, and inference tests
+frontend/tests/    # Frontend confidence/statistics tests
+docs/              # Architecture, setup, deployment, and audit
+models/            # Existing tracked checkpoint and label encoder
+.github/workflows/ # Backend and frontend CI checks
 ```
 
-### 🧠 Model Specifications
-- **Input**: 128x128 Mel-Spectrogram (Log-Scale)
-- **Feature Extractor**: 4 Residual Blocks (CNN) with Spatial Dropout (0.5).
-- **Sequence Learner**: Bi-Directional LSTM (2 Layers, 128 Hidden).
-- **Regularization**: Label Smoothing (0.1) + AdamW Weight Decay (5e-3) + Aggressive Data Augmentation.
+Root Python modules remain compatibility entry points. `backend:app`, `python main.py`, and
+`streamlit run app.py` keep their command names after installing the package. New code belongs
+in the package and frontend feature modules. Generated Python caches and editor state are no
+longer tracked.
 
----
+## Quick start
 
-## 📊 Performance Benchmarks (Latest Training Run)
+Use Python 3.10+ and Node.js 22. From the repository root:
 
-| Metric | Phase 1 (Baseline) | Phase 3 (Final Optimized) |
-| :--- | :--- | :--- |
-| **Training Accuracy** | 76.0% | **73.5%** (Aggressive Dropout) |
-| **Validation Accuracy** | 55.0% | **69.6%** (Best) |
-| **Test Set Accuracy** | 48.0% | **53.0%** (Robust Generalization) |
-| **Key Strength** | Overfitting | **High Recall on Critical Faults** |
-
-**Observation**: While raw accuracy on the complex 6-class dataset is 53%, the model achieves near **100% recall on Braking and Combustion faults**, ensuring that safety-critical anomalies are never missed by the system.
-
-**Key Learning**: In acoustic AI, the quality and resolution of the spectrogram (Signal Processing) are more critical than the depth of the neural network.
-
----
-
-## 📦 Installation & Setup
-
-### 1. Requirements
-- Python 3.9+ & Node.js 18+
-- Hardware: CPU is sufficient for inference, GPU recommended for training.
-
-### 2. Quick Start
 ```bash
-# 1. Setup Backend
-pip install -r requirements.txt
-python merge_unprocessed_data.py # Merge and diversify data
-python main.py                  # Train & Evaluate
+python -m venv .venv
+source .venv/bin/activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m uvicorn backend:app --host 127.0.0.1 --port 8000
+```
 
-# 2. Setup Frontend
+In another terminal:
+
+```bash
 cd frontend
-npm install
+npm ci
+# Optional: copy .env.example to .env.local and set NEXT_PUBLIC_API_URL
 npm run dev
 ```
 
----
+The frontend defaults to `http://localhost:8000`. Open `http://localhost:3000`.
+Environment examples are templates: configure/export variables explicitly or pass an env file;
+Python code does not load `.env` automatically. For CPU-only PyTorch, installation instructions
+are in [setup](docs/setup.md).
 
-## 📂 Documentation & Files
-- `config.py`: Centralized hyperparameter and mapping configuration.
-- `model.py`: The PyTorch EngineCRNN definition.
-- `preprocessing.py`: Our signal processing pipeline (resampling, augmentation, Mel-extraction).
-- `data_loader.py`: Handles class grouping and weighted sampling.
-- `results/`: Contains training logs, confusion matrices, and loss curves.
+## Dataset and model checks
 
----
+```bash
+car-fault-dataset
+car-fault-dataset --directory /path/to/recordings
+python scripts/check_model.py
+```
 
-## 🎯 Future Impact
-ENDS represents the first step toward **Autonomous Vehicle Diagnostics**. Future iterations will include:
-1. **OBD-II Fusion**: Combining sound with sensor data (RPM, Temp).
-2. **Predictive Analytics**: Forecasting failure 100 miles before it happens.
-3. **Mobile Edge Deployment**: Running the full model on Android/iOS via ONNX.
+Inventory reports candidate file counts, source labels, and split directories without claiming
+that contents or labels are valid. No training dataset is downloaded automatically.
+The checkpoint validator rejects incompatible weights instead of silently using random
+parameters. Read [dataset findings](docs/audit.md) before training.
 
----
-**Created for [Competition Name/Course Name]**
-*Team: [Your Team Name]*
-*Instructor: [Instructor Name]*
+## Offline training and local dashboard
 
-**Disclaimer**: This is a diagnostic research prototype. Always consult a certified mechanic for vehicle repairs.
+```bash
+python -m pip install -e '.[training]'
+# Supply licensed, labeled data first; see docs/setup.md
+python organize_dataset.py
+python main.py
+
+# Optional Streamlit adapter
+python -m pip install -e '.[dashboard]'
+streamlit run apps/streamlit_app.py
+```
+
+Training overwrites model artifacts in `MODELS_DIR`; use a separate artifact directory when
+experimenting. No retraining was performed as part of the refactor.
+
+## Validation
+
+```bash
+python -m pip install -e '.[dev,training]'
+ruff check .
+ruff format --check .
+python -m pytest -q
+cd frontend
+npm run lint
+npm run format:check
+npm test
+npm run build
+```
+
+API confidence is a softmax score from the loaded model, not calibrated accuracy. The dashboard
+shows actual request timing and session counts; missing confidence is shown as unavailable.
+It does not simulate uptime, prediction scores, load charts, or encryption controls.
+
+See [architecture](docs/architecture.md), [setup](docs/setup.md), and
+[deployment](docs/deployment.md). Original project claims are archived under `docs/history/`
+and are not a substitute for reproducible evaluation reports.
