@@ -116,27 +116,31 @@ export default function VehiclePanel() {
       {matches && (
         <div>
           <p className={styles.warning}>{matches.notice}</p>
+          {matches.manual_entry_recommended && (
+            <p role="status">No reliable photo match. Enter your vehicle details manually.</p>
+          )}
           <ul>
-            {matches.candidates.map((candidate) => (
-              <li key={candidate.label}>
-                <p>
-                  {candidate.label} · model score {formatConfidence(candidate.confidence)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfile({
-                      make: candidate.make,
-                      model: candidate.model,
-                      year: candidate.year_candidate || '',
-                    })
-                    setResources(null)
-                  }}
-                >
-                  Use this candidate for review
-                </button>
-              </li>
-            ))}
+            {!matches.manual_entry_recommended &&
+              matches.candidates.map((candidate) => (
+                <li key={candidate.label}>
+                  <p>
+                    {candidate.label} · model score {formatConfidence(candidate.confidence)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfile({
+                        make: candidate.make,
+                        model: candidate.model,
+                        year: candidate.year_candidate || '',
+                      })
+                      setResources(null)
+                    }}
+                  >
+                    Use this candidate for review
+                  </button>
+                </li>
+              ))}
           </ul>
         </div>
       )}

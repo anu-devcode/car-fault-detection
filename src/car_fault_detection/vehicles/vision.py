@@ -80,8 +80,14 @@ class VehicleRecognizer:
                     "confidence": score,
                 }
             )
+        # Conservative UI heuristic, not calibrated accuracy or a car-presence detector.
+        weak = (
+            candidates[0]["confidence"] < 0.25
+            or candidates[0]["confidence"] - candidates[1]["confidence"] < 0.05
+        )
         return {
-            "status": "candidate_matches_only",
+            "status": "uncertain" if weak else "candidate_matches_only",
+            "manual_entry_recommended": weak,
             "confirmation_required": True,
             "candidates": candidates,
             "model_revision": self.revision,

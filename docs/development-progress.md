@@ -49,7 +49,7 @@ provenance and evaluation reports are committed. Do not redistribute restricted 
 
 ## Test evidence
 
-- 28 Python tests: original APIs plus urgent symptom overrides, split leakage, research-model
+- 29 Python tests: original APIs plus urgent symptom overrides, split leakage, research-model
   opt-in, optional photo operation, file limits/decoding, and manual-source lookup.
 - 7 frontend tests: multipart/timeout/errors, confidence/statistics and regional map links.
 - Ruff, ESLint, Prettier and Next.js production build succeeded locally.
@@ -74,3 +74,7 @@ provenance and evaluation reports are committed. Do not redistribute restricted 
    garage-provider directory with verified capabilities/contact details. Maps search is the initial adapter.
 5. Resolve dependency advisories, privacy/retention/authentication and performance requirements.
    Production is a separate stage that the user has explicitly postponed.
+
+Low-score or ambiguous photo outputs recommend manual entry and hide candidate selection in
+the UI. This conservative score/margin heuristic is not calibrated recognition accuracy or a
+car-presence detector; high-scoring non-car/unsupported inputs may still be wrong.

@@ -16,3 +16,7 @@ presence detector: even a non-car image can yield a confident wrong car label. E
 engine, VIN, history, mileage and hidden damage cannot be recovered from appearance alone.
 Camera quality, model year lookalikes, regional trims and unsupported makes require explicit
 coverage testing. Manual vehicle entry remains available independently of this optional model.
+
+Low-score or ambiguous photo outputs recommend manual entry and hide candidate selection in
+the UI. This conservative score/margin heuristic is not calibrated recognition accuracy or a
+car-presence detector; high-scoring non-car/unsupported inputs may still be wrong.

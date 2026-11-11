@@ -68,3 +68,21 @@ def _tiny_image():
     content = io.BytesIO()
     Image.new("RGB", (10, 10)).save(content, format="PNG")
     return content.getvalue()
+
+
+def test_ambiguous_photo_scores_recommend_manual_entry():
+    import torch
+
+    recognizer = VehicleRecognizer.__new__(VehicleRecognizer)
+    recognizer.labels = {
+        i: {"class_name": f"Car Test {2000 + i}", "make": "Car", "model": "Test"} for i in range(5)
+    }
+    recognizer.transform = lambda _: torch.zeros(3, 80, 80)
+    recognizer.model = lambda _: torch.zeros(1, 5)
+    recognizer.revision = "test"
+    photo = io.BytesIO()
+    Image.new("RGB", (100, 100), "white").save(photo, format="PNG")
+    result = recognizer.predict(photo.getvalue())
+    assert result["status"] == "uncertain"
+    assert result["manual_entry_recommended"] is True
+    assert result["confirmation_required"] is True
