@@ -4,6 +4,12 @@ The current Vercel frontend is reachable, but the configured Railway address ret
 application-not-found response. Changes here have not been deployed. Account-level logs,
 service/domain settings, and environment configuration must be inspected to establish the cause.
 
+## GitHub source
+
+Development continues in `anu-devcode/car-fault-detection` on `main`. The full application was
+imported from A3M-IS with source history retained. Select the development repository in Vercel
+and Railway before deploying from it; a Git remote change does not transfer hosting projects.
+
 ## Backend: Railway (or another Python host)
 
 - Repository root: project root.

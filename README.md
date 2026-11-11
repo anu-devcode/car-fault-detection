@@ -1,5 +1,9 @@
 # Car Fault Detection
 
+Development repository: [anu-devcode/car-fault-detection](https://github.com/anu-devcode/car-fault-detection).
+The full application was imported and refactored from
+[A3M-IS/car-fault-detection](https://github.com/A3M-IS/car-fault-detection), with its history retained.
+
 Audio-based engine fault classification using a PyTorch CRNN, a FastAPI inference service,
 and a Next.js dashboard. This is a research prototype; a prediction does not establish
 whether a vehicle is safe to drive.

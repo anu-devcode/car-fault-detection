@@ -5,14 +5,17 @@ Vercel/Railway account logs or an independent model-quality evaluation.
 
 ## Source of truth
 
-The complete project is `https://github.com/A3M-IS/car-fault-detection.git`, inspected at
+The original complete project was sourced from `https://github.com/A3M-IS/car-fault-detection.git`, inspected at
 `edb303dee1ba3c78818e6b2a69be741f8836d133` (`main`). Its homepage matches the supplied Vercel
 URL, and its frontend/API contracts match the inspected deployed application. The precise
 Vercel deployment commit was not verified through hosting-account access.
 
-The initially supplied `anu-devcode/car-fault-detection` repository contains only Python
-placeholders. It is not the full deployed project's source. The main refactor applies to
-**A3M-IS/car-fault-detection**, with the earlier scaffold work kept in a separate checkout.
+The initially supplied `anu-devcode/car-fault-detection` repository contained only Python
+placeholders at commit `9a7f777017688226d7b371cacf7cc6fde2425a81`. At the user's request,
+ongoing development now uses **anu-devcode/car-fault-detection** with the full refactored
+application imported from A3M-IS. The import retains both the original destination commit
+and the full application's source history. Hosting connections still need to be checked
+and switched to the development repository in the hosting providers' settings.
 
 ## Production status
 
@@ -124,8 +127,8 @@ Validation completed locally:
 1. Restore the Railway API service/domain and configure `ALLOWED_ORIGINS` for the Vercel origin.
    Confirm `/ready`, not only liveness, before testing inference.
 2. Build the frontend with the restored API URL and deploy the reviewed refactor from the
-   correct repository. The connected GitHub account has read-only access to A3M-IS, so this
-   task cannot push a branch there or publish a PR from that branch.
+   development repository, `anu-devcode/car-fault-detection`. Check the GitHub source configured
+   in Vercel and Railway; changing the local Git remote does not update those hosting connections.
 3. Obtain the original dataset/provenance and reproduce held-out model evaluation. API softmax
    confidence is not calibrated accuracy or proof of vehicle safety.
 4. Upgrade the frontend framework through a tested release plan. The production dependency
