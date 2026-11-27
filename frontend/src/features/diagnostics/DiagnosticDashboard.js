@@ -36,6 +36,7 @@ export default function DiagnosticDashboard() {
     previewUrl,
     fileInputRef,
     recording,
+    preparingRecording,
     scanProgress,
     isPlaying,
     statusMsg,
@@ -479,10 +480,19 @@ export default function DiagnosticDashboard() {
                     <button
                       className={`btn-cyber ${recording ? 'active' : ''}`}
                       onClick={recording ? stopRecording : startRecording}
+                      disabled={loading || preparingRecording}
                     >
                       {recording ? <Square size={18} fill="currentColor" /> : <Mic size={18} />}
-                      {recording ? 'STOP RECORDING' : 'START RECORDING'}
+                      {recording
+                        ? 'STOP RECORDING'
+                        : preparingRecording
+                          ? 'PLEASE WAIT'
+                          : 'START RECORDING'}
                     </button>
+                    <p>
+                      Record up to 10 seconds while safely parked, away from traffic and moving
+                      parts.
+                    </p>
                   </div>
                   <div className="control-card">
                     <div className="hud-title">
@@ -491,7 +501,7 @@ export default function DiagnosticDashboard() {
                     <button
                       className={`btn-cyber ${file && !loading ? 'active' : ''}`}
                       onClick={handlePredict}
-                      disabled={!file || loading}
+                      disabled={!file || loading || recording || preparingRecording}
                       style={{
                         cursor: !file || loading ? 'not-allowed' : 'pointer',
                         opacity: !file || loading ? 0.5 : 1,

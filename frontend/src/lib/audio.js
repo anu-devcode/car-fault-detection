@@ -12,6 +12,22 @@ export const encodeWav = (audioBuffer) => {
         })
       : audioBuffer.getChannelData(0)
 
+  if (source.length < sampleRate) {
+    throw new Error('Record at least one second of engine audio.')
+  }
+  let energy = 0
+  let clipped = 0
+  for (const sample of source) {
+    energy += sample * sample
+    if (Math.abs(sample) >= 0.99) clipped += 1
+  }
+  if (Math.sqrt(energy / source.length) < 0.001) {
+    throw new Error('The recording is too quiet. Try another recording in a quiet area.')
+  }
+  if (clipped / source.length >= 0.05) {
+    throw new Error('The recording is distorted. Try another recording from a little farther away.')
+  }
+
   const buffer = new ArrayBuffer(44 + source.length * 2)
   const view = new DataView(buffer)
   const writeString = (offset, text) => {
@@ -48,7 +64,9 @@ export const blobToWavFile = async (blob) => {
   const audioContext = new (window.AudioContext || window.webkitAudioContext)()
   try {
     const arrayBuffer = await blob.arrayBuffer()
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0))
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer).catch(() => {
+      throw new Error('Could not read the microphone recording. Try again.')
+    })
     return new Blob([encodeWav(audioBuffer)], { type: 'audio/wav' })
   } finally {
     await audioContext.close()
