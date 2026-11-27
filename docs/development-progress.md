@@ -87,6 +87,12 @@ accessible components. The inspection model returns a restricted vocabulary; the
 supported clues with follow-up checks and keeps vehicle matching separate. The operator must
 review actual performance on representative photos before releasing the feature.
 
+The visible-clue checklist also works with the API when automatic recognition is unavailable.
+Choose the area and check only clues you can see. A photo suggestion selects a possible area,
+and every clue starts unchecked. Follow-up guidance appears for selected clues. Downloaded text
+notes include the selected observations and their follow-up steps for a mechanic. The download
+is created in the browser and contains no photograph.
+
 Start Ollama on the API host with a local vision model, for example by running
 `ollama pull gemma3:4b` after installing Ollama. Install the Python `vision` extra, set
 `PHOTO_INSPECTION_MODEL=gemma3:4b` and restart the API. The backend uses the loopback host

@@ -27,7 +27,14 @@ def test_any_manual_make_is_accepted_without_inventing_specs():
 
 def test_photo_service_is_optional_and_manual_entry_still_works():
     with TestClient(create_app(lambda: None, lambda: None)) as client:
-        assert client.get("/vehicles/vision/status").json()["ready"] is False
+        status = client.get("/vehicles/vision/status").json()
+        assert status["ready"] is False
+        assert status["inspection_configured"] is False
+        options = {area["scene"]: area["findings"] for area in status["inspection_options"]}
+        assert "unclear" not in options
+        assert "unrelated" not in options
+        assert "sidewall_bulge" in {finding["code"] for finding in options["tyre"]}
+        assert "oil_pressure_symbol" not in {finding["code"] for finding in options["tyre"]}
         assert (
             client.post("/vehicles/inspect", files={"file": ("car.png", b"fake")}).status_code
             == 503
@@ -115,9 +122,9 @@ def test_inspection_filters_unrelated_clues_and_strips_metadata(monkeypatch):
             "/vehicles/inspect", files={"file": ("tyre.jpg", original.getvalue())}
         )
         assert response.status_code == 200
-        assert [finding["title"] for finding in response.json()["findings"]] == [
-            "Possible tyre sidewall bulge"
-        ]
+        findings = response.json()["findings"]
+        assert [finding["title"] for finding in findings] == ["Possible tyre sidewall bulge"]
+        assert findings[0]["code"] == "sidewall_bulge"
         assert (
             client.post("/vehicles/inspect", files={"file": ("invalid.jpg", b"fake")}).status_code
             == 422

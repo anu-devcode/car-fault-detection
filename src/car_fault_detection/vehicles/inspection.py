@@ -84,13 +84,13 @@ FINDINGS = {
     "oil_pressure_symbol": (
         "Possible oil-pressure warning symbol",
         {"dashboard"},
-        "Match the symbol in your owner manual. If the warning stays on with the engine running, use the urgent symptom check below.",
+        "Match the symbol in your owner manual. If the warning stays on with the engine running, use the urgent symptom check.",
         None,
     ),
     "temperature_symbol": (
         "Possible temperature warning symbol",
         {"dashboard"},
-        "Match the symbol in your owner manual. If the engine is overheating, use the urgent symptom check below.",
+        "Match the symbol in your owner manual. If the engine is overheating, use the urgent symptom check.",
         None,
     ),
     "tyre_pressure_symbol": (
@@ -102,7 +102,7 @@ FINDINGS = {
     "engine_warning_symbol": (
         "Possible engine warning symbol",
         {"dashboard"},
-        "Read the diagnostic codes and ask a mechanic to verify the cause. If the light is flashing, use the urgent symptom check below.",
+        "Read the diagnostic codes and ask a mechanic to verify the cause. If the light is flashing, use the urgent symptom check.",
         None,
     ),
     "dent": (
@@ -150,6 +150,26 @@ class VisualEvidence(BaseModel):
     clues: list[Clue] = Field(max_length=6)
 
 
+def finding_details(code: str) -> dict:
+    title, _, next_step, source_url = FINDINGS[code]
+    return {"code": code, "title": title, "next_step": next_step, "source_url": source_url}
+
+
+def inspection_options() -> list[dict]:
+    return [
+        {
+            "scene": scene,
+            "subject": subject,
+            "next_photo": next_photo,
+            "findings": [
+                finding_details(code) for code, finding in FINDINGS.items() if scene in finding[1]
+            ],
+        }
+        for scene, (subject, next_photo) in SCENES.items()
+        if scene not in {"unclear", "unrelated"}
+    ]
+
+
 class InspectionUnavailable(RuntimeError):
     pass
 
@@ -182,11 +202,11 @@ class PhotoInspector:
             self.lock.release()
 
         scene, next_photo = SCENES[evidence.scene]
-        findings = []
-        for clue in dict.fromkeys(evidence.clues):
-            title, allowed_scenes, next_step, source_url = FINDINGS[clue]
-            if evidence.scene in allowed_scenes:
-                findings.append({"title": title, "next_step": next_step, "source_url": source_url})
+        findings = [
+            finding_details(clue)
+            for clue in dict.fromkeys(evidence.clues)
+            if evidence.scene in FINDINGS[clue][1]
+        ]
         return {
             "scene": evidence.scene,
             "subject": scene,
