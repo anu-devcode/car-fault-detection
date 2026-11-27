@@ -6,15 +6,21 @@ import tempfile
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from car_fault_detection import config
 from car_fault_detection.api.care import router as care_router
 from car_fault_detection.api.vehicles import router as vehicle_router
 from car_fault_detection.care.guidance import CareRequest, build_advice
+from car_fault_detection.platform.access import router as platform_access_router
+from car_fault_detection.platform.database import open_engine
 
 logger = logging.getLogger(__name__)
 MAX_AUDIO_SIZE_BYTES = 5 * 1024 * 1024
@@ -91,6 +97,8 @@ def create_app(
         application.state.detector = None
         application.state.vehicle_recognizer = None
         application.state.photo_inspector = None
+        if application.state.platform_engine is not None:
+            await run_in_threadpool(application.state.platform_engine.dispose)
 
     application = FastAPI(
         title="Car Engine Fault Detection API", version="0.2.0", lifespan=lifespan
@@ -98,8 +106,25 @@ def create_app(
     application.state.detector = None
     application.state.vehicle_recognizer = None
     application.state.photo_inspector = None
+    database_url = os.environ.get("PLATFORM_DATABASE_URL")
+    application.state.platform_engine = open_engine(database_url) if database_url else None
+    web_origin = os.environ.get("PLATFORM_WEB_ORIGIN", "http://localhost:3000")
+    parsed_origin = urlsplit(web_origin)
+    if database_url and (
+        not parsed_origin.netloc
+        or web_origin != f"{parsed_origin.scheme}://{parsed_origin.netloc}"
+        or parsed_origin.username
+        or (
+            parsed_origin.scheme != "https"
+            and web_origin not in {"http://localhost:3000", "http://127.0.0.1:3000"}
+        )
+    ):
+        raise ValueError("Set PLATFORM_WEB_ORIGIN to the exact HTTPS frontend origin.")
+    application.state.platform_web_origin = web_origin
+    application.state.secure_platform_cookie = parsed_origin.scheme == "https"
     application.include_router(care_router)
     application.include_router(vehicle_router)
+    application.include_router(platform_access_router, prefix="/platform", tags=["assistance"])
     origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
     application.add_middleware(
         CORSMiddleware,
@@ -108,6 +133,31 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
     )
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError):
+        if request.url.path.startswith("/platform/"):
+            # Validation responses must not echo credentials or driver's notes.
+            return JSONResponse(
+                {"detail": "Check the submitted fields and try again."}, status_code=422
+            )
+        return await request_validation_exception_handler(request, exc)
+
+    @application.middleware("http")
+    async def protect_workspace_responses(request: Request, call_next):
+        if not request.url.path.startswith("/platform/"):
+            return await call_next(request)
+        if (
+            request.method == "POST"
+            and request.headers.get("content-length", "").isdigit()
+            and int(request.headers["content-length"]) > 8192
+        ):
+            response = JSONResponse({"detail": "Request is too large."}, status_code=413)
+        else:
+            response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
     def require_detector():
         detector = application.state.detector
