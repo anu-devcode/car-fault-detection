@@ -2,10 +2,11 @@
 
 import csv
 import hashlib
-import io
 import json
 import re
 from pathlib import Path
+
+from car_fault_detection.vehicles.images import decode_photo
 
 
 class VehicleRecognizer:
@@ -50,21 +51,9 @@ class VehicleRecognizer:
 
     def predict(self, content):
         import torch
-        from PIL import Image, ImageOps, UnidentifiedImageError
 
-        try:
-            with Image.open(io.BytesIO(content)) as image:
-                if image.format not in {"JPEG", "PNG", "WEBP"}:
-                    raise ValueError("Use a JPEG, PNG or WEBP photograph")
-                if min(image.size) < 80 or image.width * image.height > 16_000_000:
-                    raise ValueError(
-                        "Photo dimensions must be at least 80px and at most 16 megapixels"
-                    )
-                image.verify()
-            with Image.open(io.BytesIO(content)) as image:
-                tensor = self.transform(ImageOps.exif_transpose(image).convert("RGB"))[None]
-        except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
-            raise ValueError("Unable to decode photograph") from exc
+        image = decode_photo(content)
+        tensor = self.transform(image)[None]
         with torch.inference_mode():
             scores, indices = self.model(tensor).softmax(1).topk(5)
         candidates = []

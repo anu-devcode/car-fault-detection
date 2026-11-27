@@ -136,3 +136,20 @@
   border-radius: 12px;
   margin: 16px 0;
 }
+
+.photoActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.photoActions label {
+  flex: 1 1 220px;
+}
+
+.photoResult {
+  margin-block: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}

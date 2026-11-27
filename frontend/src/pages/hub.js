@@ -76,7 +76,7 @@ export default function CarHub() {
         </p>
       </header>
       <div className={styles.grid}>
-        <section className={styles.card}>
+        <section className={styles.card} id="symptom-check">
           <h2>What are you noticing?</h2>
           <p>Symptoms take priority over an audio result. Use this form while safely parked.</p>
           <form onSubmit={submit}>

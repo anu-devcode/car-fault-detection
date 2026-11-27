@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from car_fault_detection.api.app import create_app
 from car_fault_detection.api.vehicles import MAX_PHOTO_BYTES
+from car_fault_detection.vehicles.inspection import PhotoInspector, VisualEvidence
 from car_fault_detection.vehicles.resources import VehicleProfile, owner_resources
 from car_fault_detection.vehicles.vision import VehicleRecognizer
 
@@ -27,6 +28,10 @@ def test_any_manual_make_is_accepted_without_inventing_specs():
 def test_photo_service_is_optional_and_manual_entry_still_works():
     with TestClient(create_app(lambda: None, lambda: None)) as client:
         assert client.get("/vehicles/vision/status").json()["ready"] is False
+        assert (
+            client.post("/vehicles/inspect", files={"file": ("car.png", b"fake")}).status_code
+            == 503
+        )
         assert (
             client.post("/vehicles/identify", files={"file": ("car.png", b"fake")}).status_code
             == 503
@@ -86,3 +91,34 @@ def test_ambiguous_photo_scores_recommend_manual_entry():
     assert result["status"] == "uncertain"
     assert result["manual_entry_recommended"] is True
     assert result["confirmation_required"] is True
+
+
+def test_inspection_filters_unrelated_clues_and_strips_metadata(monkeypatch):
+    inspector = PhotoInspector("gemma3:4b")
+
+    def classify(photo):
+        with Image.open(io.BytesIO(photo)) as received:
+            assert received.format == "JPEG"
+            assert not received.getexif()
+        return VisualEvidence(
+            scene="tyre", clues=["sidewall_bulge", "oil_pressure_symbol", "sidewall_bulge"]
+        )
+
+    monkeypatch.setattr(inspector, "classify", classify)
+    original = io.BytesIO()
+    exif = Image.Exif()
+    exif[270] = "metadata"
+    Image.new("RGB", (160, 160)).save(original, "JPEG", exif=exif)
+    with TestClient(create_app(lambda: None, lambda: None, lambda: inspector)) as client:
+        assert client.get("/vehicles/vision/status").json()["inspection_configured"]
+        response = client.post(
+            "/vehicles/inspect", files={"file": ("tyre.jpg", original.getvalue())}
+        )
+        assert response.status_code == 200
+        assert [finding["title"] for finding in response.json()["findings"]] == [
+            "Possible tyre sidewall bulge"
+        ]
+        assert (
+            client.post("/vehicles/inspect", files={"file": ("invalid.jpg", b"fake")}).status_code
+            == 422
+        )
