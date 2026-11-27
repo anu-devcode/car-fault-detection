@@ -49,8 +49,19 @@ def load_vehicle_recognizer():
     return VehicleRecognizer(directory)
 
 
+def load_photo_inspector():
+    model = os.environ.get("PHOTO_INSPECTION_MODEL")
+    if not model:
+        return None
+    from car_fault_detection.vehicles.inspection import PhotoInspector
+
+    return PhotoInspector(model)
+
+
 def create_app(
-    detector_factory: Callable = load_detector, vehicle_factory: Callable = load_vehicle_recognizer
+    detector_factory: Callable = load_detector,
+    vehicle_factory: Callable = load_vehicle_recognizer,
+    inspection_factory: Callable = load_photo_inspector,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
@@ -64,15 +75,22 @@ def create_app(
         except Exception:
             logger.exception("Photo model initialization failed; manual vehicle entry is available")
             application.state.vehicle_recognizer = None
+        try:
+            application.state.photo_inspector = await run_in_threadpool(inspection_factory)
+        except Exception:
+            logger.exception("Photo inspection initialization failed")
+            application.state.photo_inspector = None
         yield
         application.state.detector = None
         application.state.vehicle_recognizer = None
+        application.state.photo_inspector = None
 
     application = FastAPI(
         title="Car Engine Fault Detection API", version="0.2.0", lifespan=lifespan
     )
     application.state.detector = None
     application.state.vehicle_recognizer = None
+    application.state.photo_inspector = None
     application.include_router(care_router)
     application.include_router(vehicle_router)
     origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")

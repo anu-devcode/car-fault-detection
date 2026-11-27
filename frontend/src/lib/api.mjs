@@ -50,8 +50,11 @@ export const vehicleResources = (profile) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profile),
   })
-export async function identifyVehicle(file) {
+function uploadPhoto(path, file) {
   const body = new FormData()
   body.append('file', file)
-  return request('/vehicles/identify', { method: 'POST', body })
+  return request(path, { method: 'POST', body })
 }
+
+export const identifyVehicle = (file) => uploadPhoto('/vehicles/identify', file)
+export const inspectVehiclePhoto = (file) => uploadPhoto('/vehicles/inspect', file)

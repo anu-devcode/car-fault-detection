@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
-import { identifyVehicle, photoModelStatus, vehicleResources } from '../../lib/api.mjs'
+import {
+  identifyVehicle,
+  inspectVehiclePhoto,
+  photoModelStatus,
+  vehicleResources,
+} from '../../lib/api.mjs'
 import { formatConfidence } from '../../lib/metrics.mjs'
 import styles from '../../styles/hub.module.css'
 
 export default function VehiclePanel() {
   const [ready, setReady] = useState(false)
+  const [inspectionConfigured, setInspectionConfigured] = useState(false)
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [matches, setMatches] = useState(null)
+  const [inspection, setInspection] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [profile, setProfile] = useState({ make: '', model: '', year: '' })
@@ -17,7 +24,10 @@ export default function VehiclePanel() {
     let active = true
     photoModelStatus()
       .then((value) => {
-        if (active) setReady(value.ready)
+        if (active) {
+          setReady(value.ready)
+          setInspectionConfigured(value.inspection_configured)
+        }
       })
       .catch(() => {})
     return () => {
@@ -37,14 +47,30 @@ export default function VehiclePanel() {
   function choose(event) {
     if (busy) return
     const selected = event.target.files?.[0]
-    setMatches(null)
-    setError('')
     if (!selected) return
+    setMatches(null)
+    setInspection(null)
+    setFile(null)
+    setError('')
+    event.target.value = ''
     if (selected.size > 8 * 1024 * 1024) {
       setError('Photo exceeds the 8 MB limit.')
       return
     }
     setFile(selected)
+  }
+  async function inspect() {
+    if (!file || busy) return
+    setBusy(true)
+    setError('')
+    setInspection(null)
+    try {
+      setInspection(await inspectVehiclePhoto(file))
+    } catch (err) {
+      setError(err.message || 'Photo inspection was unavailable. Try the symptom check.')
+    } finally {
+      setBusy(false)
+    }
   }
   async function identify() {
     if (!file || busy) return
@@ -77,26 +103,32 @@ export default function VehiclePanel() {
 
   return (
     <section className={styles.card} id="vehicle-profile">
-      <h2>Know your vehicle</h2>
+      <h2>Vehicle photo check</h2>
       <p>
-        Photograph the whole car clearly. Review possible matches, then confirm or enter details
-        manually. All makes can use manual entry; the photo model has limited coverage.
+        Use a whole-car photo to find possible make and model matches. Use a close-up of a tyre,
+        dashboard, engine bay or body panel to look for visible clues.
       </p>
-      <p>
-        {ready
-          ? 'Photo model is ready for this development session.'
-          : 'Photo model is not configured here. Manual entry remains available.'}
-      </p>
-      <label>
-        Take or upload a car photo
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          capture="environment"
-          onChange={choose}
-          disabled={busy}
-        />
-      </label>
+      <div className={styles.photoActions}>
+        <label>
+          Take a photo
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            onChange={choose}
+            disabled={busy}
+          />
+        </label>
+        <label>
+          Choose a photo
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={choose}
+            disabled={busy}
+          />
+        </label>
+      </div>
       {preview && (
         <div
           className={styles.preview}
@@ -105,13 +137,49 @@ export default function VehiclePanel() {
           aria-label="Selected car photograph"
         />
       )}
-      <button type="button" disabled={!ready || !file || busy} onClick={identify}>
-        {busy ? 'Working…' : 'Find possible car matches'}
-      </button>
+      {file && <p>{file.name}</p>}
+      <div className={styles.photoActions}>
+        <button type="button" disabled={!inspectionConfigured || !file || busy} onClick={inspect}>
+          Inspect visible clues
+        </button>
+        <button type="button" disabled={!ready || !file || busy} onClick={identify}>
+          Find make and model matches
+        </button>
+      </div>
+      {busy && <p role="status">Working…</p>}
+      {!inspectionConfigured && (
+        <p>Photo inspection is unavailable here. You can use the symptom check above.</p>
+      )}
+      {!ready && <p>Photo matching is unavailable here. You can enter the make and model below.</p>}
       {error && (
         <p role="alert" className={styles.warning}>
           {error}
         </p>
+      )}
+      {inspection && (
+        <div className={styles.photoResult} aria-live="polite">
+          <h3>{inspection.subject}</h3>
+          {inspection.findings.length ? (
+            <ul>
+              {inspection.findings.map((finding) => (
+                <li key={finding.title}>
+                  <strong>{finding.title}</strong>
+                  <p>{finding.next_step}</p>
+                  {finding.source_url && (
+                    <a href={finding.source_url} target="_blank" rel="noreferrer">
+                      Reference guidance ↗
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>The model did not flag a specific visible clue in this photo.</p>
+          )}
+          <p>{inspection.next_photo}</p>
+          <p className={styles.warning}>{inspection.notice}</p>
+          <a href="#symptom-check">Continue with the symptom check</a>
+        </div>
       )}
       {matches && (
         <div>
@@ -205,8 +273,8 @@ export default function VehiclePanel() {
         </div>
       )}
       <p>
-        Photos are processed by the development API and are not saved by this app. No image result
-        confirms an engine, VIN, trim, maintenance history or hidden damage.
+        Photo inspection uses the model on the API host. Review any make or model match before using
+        its owner resources.
       </p>
     </section>
   )
