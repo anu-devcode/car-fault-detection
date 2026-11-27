@@ -21,6 +21,7 @@ from car_fault_detection.api.vehicles import router as vehicle_router
 from car_fault_detection.care.guidance import CareRequest, build_advice
 from car_fault_detection.platform.access import router as platform_access_router
 from car_fault_detection.platform.database import open_engine
+from car_fault_detection.platform.workspace import router as platform_router
 
 logger = logging.getLogger(__name__)
 MAX_AUDIO_SIZE_BYTES = 5 * 1024 * 1024
@@ -125,6 +126,7 @@ def create_app(
     application.include_router(care_router)
     application.include_router(vehicle_router)
     application.include_router(platform_access_router, prefix="/platform", tags=["assistance"])
+    application.include_router(platform_router)
     origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
     application.add_middleware(
         CORSMiddleware,
