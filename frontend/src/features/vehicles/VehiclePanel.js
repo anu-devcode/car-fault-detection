@@ -7,6 +7,9 @@ import {
 } from '../../lib/api.mjs'
 import { formatConfidence } from '../../lib/metrics.mjs'
 import styles from '../../styles/hub.module.css'
+import PhotoReview from './PhotoReview'
+
+const emptyReview = { scene: '', confirmed: [] }
 
 export default function VehiclePanel() {
   const [ready, setReady] = useState(false)
@@ -15,6 +18,8 @@ export default function VehiclePanel() {
   const [preview, setPreview] = useState(null)
   const [matches, setMatches] = useState(null)
   const [inspection, setInspection] = useState(null)
+  const [reviewOptions, setReviewOptions] = useState([])
+  const [review, setReview] = useState(emptyReview)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [profile, setProfile] = useState({ make: '', model: '', year: '' })
@@ -27,6 +32,7 @@ export default function VehiclePanel() {
         if (active) {
           setReady(value.ready)
           setInspectionConfigured(value.inspection_configured)
+          setReviewOptions(value.inspection_options || [])
         }
       })
       .catch(() => {})
@@ -50,6 +56,7 @@ export default function VehiclePanel() {
     if (!selected) return
     setMatches(null)
     setInspection(null)
+    setReview(emptyReview)
     setFile(null)
     setError('')
     event.target.value = ''
@@ -64,10 +71,15 @@ export default function VehiclePanel() {
     setBusy(true)
     setError('')
     setInspection(null)
+    setReview(emptyReview)
     try {
-      setInspection(await inspectVehiclePhoto(file))
+      const result = await inspectVehiclePhoto(file)
+      setInspection(result)
+      if (reviewOptions.some((option) => option.scene === result.scene)) {
+        setReview({ scene: result.scene, confirmed: [] })
+      }
     } catch (err) {
-      setError(err.message || 'Photo inspection was unavailable. Try the symptom check.')
+      setError(err.message || 'Photo inspection was unavailable. Review visible clues below.')
     } finally {
       setBusy(false)
     }
@@ -148,7 +160,7 @@ export default function VehiclePanel() {
       </div>
       {busy && <p role="status">Working…</p>}
       {!inspectionConfigured && (
-        <p>Photo inspection is unavailable here. You can use the symptom check above.</p>
+        <p>Automatic photo inspection is unavailable here. You can review visible clues below.</p>
       )}
       {!ready && <p>Photo matching is unavailable here. You can enter the make and model below.</p>}
       {error && (
@@ -156,31 +168,14 @@ export default function VehiclePanel() {
           {error}
         </p>
       )}
-      {inspection && (
-        <div className={styles.photoResult} aria-live="polite">
-          <h3>{inspection.subject}</h3>
-          {inspection.findings.length ? (
-            <ul>
-              {inspection.findings.map((finding) => (
-                <li key={finding.title}>
-                  <strong>{finding.title}</strong>
-                  <p>{finding.next_step}</p>
-                  {finding.source_url && (
-                    <a href={finding.source_url} target="_blank" rel="noreferrer">
-                      Reference guidance ↗
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>The model did not flag a specific visible clue in this photo.</p>
-          )}
-          <p>{inspection.next_photo}</p>
-          <p className={styles.warning}>{inspection.notice}</p>
-          <a href="#symptom-check">Continue with the symptom check</a>
-        </div>
-      )}
+      <PhotoReview
+        options={reviewOptions}
+        inspection={inspection}
+        review={review}
+        onChange={setReview}
+        profile={profile}
+        busy={busy}
+      />
       {matches && (
         <div>
           <p className={styles.warning}>{matches.notice}</p>

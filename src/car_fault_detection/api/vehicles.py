@@ -1,7 +1,11 @@
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from starlette.concurrency import run_in_threadpool
 
-from car_fault_detection.vehicles.inspection import InspectionBusy, InspectionUnavailable
+from car_fault_detection.vehicles.inspection import (
+    InspectionBusy,
+    InspectionUnavailable,
+    inspection_options,
+)
 from car_fault_detection.vehicles.resources import VehicleProfile, owner_resources
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
@@ -14,6 +18,7 @@ def vision_status(request: Request):
         "ready": request.app.state.vehicle_recognizer is not None,
         "inspection_configured": request.app.state.photo_inspector is not None,
         "confirmation_required": True,
+        "inspection_options": inspection_options(),
     }
 
 
