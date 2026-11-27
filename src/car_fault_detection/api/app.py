@@ -23,13 +23,20 @@ ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".aac", ".ogg", ".flac", ".w
 
 
 def load_detector():
-    if os.environ.get("AUDIO_MODEL_BACKEND") == "research_ast":
+    backend = os.environ.get("AUDIO_MODEL_BACKEND", "crnn")
+    if backend in {"research_ast", "research_crnn"}:
         if os.environ.get("ALLOW_RESEARCH_MODELS") != "true":
             raise ValueError("Research audio models require explicit local opt-in")
-        from car_fault_detection.ml.research_inference import ResearchASTDetector
+        from car_fault_detection.ml.research_inference import ResearchAudioDetector
 
-        return ResearchASTDetector(
-            os.environ.get("RESEARCH_AUDIO_MODEL_DIR", "research/transfer-comparison")
+        default_directory = (
+            "research/transfer-comparison"
+            if backend == "research_ast"
+            else "data/research/crnn-windows-3"
+        )
+        return ResearchAudioDetector(
+            os.environ.get("RESEARCH_AUDIO_MODEL_DIR", default_directory),
+            encoder=backend.removeprefix("research_"),
         )
     # Keep imports lazy so health/configuration tools do not initialize PyTorch.
     from car_fault_detection.ml.inference import EngineFaultDetector

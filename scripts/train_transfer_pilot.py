@@ -3,7 +3,6 @@
 import argparse
 import copy
 import hashlib
-import io
 import json
 import time
 from pathlib import Path
@@ -14,22 +13,30 @@ import torch
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from torch import nn
 
-from car_fault_detection.audio.preprocessing import extract_mel_spectrogram
+from car_fault_detection.audio.windows import recording_windows
 from car_fault_detection.data.manifest import validate_manifest
-from car_fault_detection.ml.inference import EngineFaultDetector
+from car_fault_detection.ml.transfer_features import (
+    checkpoint_revision,
+    crnn_recording_embedding,
+    load_crnn_encoder,
+)
 
 
-def embeddings(records, root, name, cache):
-    cache_path = cache / f"{name}.npz"
+def embeddings(records, root, name, cache, windows=1):
+    cache_path = cache / (f"{name}.npz" if windows == 1 else f"{name}-{windows}-windows.npz")
     if name == "crnn":
-        expected_revision = hashlib.sha256(Path("models/best_model.pth").read_bytes()).hexdigest()
+        expected_revision = checkpoint_revision("models/best_model.pth")
     else:
         from huggingface_hub import model_info
 
         expected_revision = model_info("MIT/ast-finetuned-audioset-10-10-0.4593").sha
     fingerprint = hashlib.sha256(
         json.dumps(
-            {"records": records, "revision": expected_revision, "pipeline": "central-second-v1"},
+            {
+                "records": records,
+                "revision": expected_revision,
+                "pipeline": "central-second-v1" if windows == 1 else "mean-three-segments-v1",
+            },
             sort_keys=True,
         ).encode()
     ).hexdigest()
@@ -38,12 +45,9 @@ def embeddings(records, root, name, cache):
         if str(data["fingerprint"]) == fingerprint:
             return data["features"], str(data["revision"])
     if name == "crnn":
-        detector = EngineFaultDetector("models/best_model.pth", "models/label_encoder.joblib")
-        model = detector.net.cpu()
-        model.classifier = nn.Identity()
-        revision = hashlib.sha256(Path("models/best_model.pth").read_bytes()).hexdigest()
+        model = load_crnn_encoder("models/best_model.pth", "models/label_encoder.joblib")
+        revision = expected_revision
     else:
-        from huggingface_hub import model_info
         from transformers import ASTFeatureExtractor, ASTModel
 
         repo = "MIT/ast-finetuned-audioset-10-10-0.4593"
@@ -56,23 +60,13 @@ def embeddings(records, root, name, cache):
     features = []
     for index, record in enumerate(records):
         audio, rate = sf.read(root / record["path"], dtype="float32")
-        # Same deterministic central second for both encoders; no padding-duration shortcuts.
-        start = (len(audio) - rate) // 2
-        audio = audio[start : start + rate]
+        segments = recording_windows(audio, rate, windows)
         if name == "crnn":
-            buffer = io.BytesIO()
-            sf.write(buffer, audio, rate, format="WAV", subtype="PCM_16")
-            buffer.seek(0)
-            mel = extract_mel_spectrogram(buffer)
-            if mel is None:
-                raise ValueError("Feature extraction failed")
-            inputs = torch.tensor(mel).float()[None, None]
-            with torch.inference_mode():
-                vector = model(inputs)[0].numpy()
+            vector = crnn_recording_embedding(model, segments, rate)
         else:
-            values = processor(audio, sampling_rate=rate, return_tensors="pt")
+            values = processor(segments, sampling_rate=rate, return_tensors="pt")
             with torch.inference_mode():
-                vector = model(**values).pooler_output[0].numpy()
+                vector = model(**values).pooler_output.mean(dim=0).numpy()
         features.append(vector)
         if index % 10 == 0:
             print(f"{name} embedding {index + 1}/{len(records)}", flush=True)
@@ -122,6 +116,7 @@ def main():
     parser.add_argument("--dataset", type=Path, default=Path("data/research/kwerimoto"))
     parser.add_argument("--output", type=Path, default=Path("research/transfer-pilot"))
     parser.add_argument("--encoders", nargs="+", choices=["crnn", "ast"], default=["crnn", "ast"])
+    parser.add_argument("--windows", type=int, choices=[1, 3], default=1)
     args = parser.parse_args()
     torch.set_num_threads(4)
     np.random.seed(42)
@@ -139,7 +134,9 @@ def main():
     reports = {}
     started = time.monotonic()
     for name in args.encoders:
-        features, revision = embeddings(records, args.dataset, name, args.dataset / "feature_cache")
+        features, revision = embeddings(
+            records, args.dataset, name, args.dataset / "feature_cache", args.windows
+        )
         candidate = fit_head(features, y, split, classes)
         candidates[name] = candidate
         reports[name] = {key: candidate[key] for key in ["validation_macro_f1", "best_epoch"]}
@@ -179,7 +176,8 @@ def main():
             "epochs": 100,
             "learning_rate": 0.003,
             "frozen_encoder": True,
-            "input": "central 1 second, mono 16 kHz",
+            "input": "mono 16 kHz, one second per window, mean of window embeddings",
+            "windows_per_recording": args.windows,
             "standardization": "training split only",
         },
         "limitations": manifest["limitations"]

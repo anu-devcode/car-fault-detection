@@ -16,19 +16,25 @@ export function useDiagnosticSession() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const fileInputRef = useRef(null)
   const [recording, setRecording] = useState(false)
-  const [mediaRecorder, setMediaRecorder] = useState(null)
+  const [preparingRecording, setPreparingRecording] = useState(false)
   const recorderRef = useRef(null)
-  useEffect(
-    () => () => {
+  const recorderTimer = useRef(null)
+  const microphonePending = useRef(false)
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      clearTimeout(recorderTimer.current)
       const recorder = recorderRef.current
       if (recorder) {
         recorder.onstop = null
         if (recorder.state !== 'inactive') recorder.stop()
         recorder.stream.getTracks().forEach((track) => track.stop())
+        recorderRef.current = null
       }
-    },
-    [],
-  )
+    }
+  }, [])
   const [scanProgress, setScanProgress] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [statusMsg, setStatusMsg] = useState('READY')
@@ -120,46 +126,67 @@ export function useDiagnosticSession() {
   }
 
   const startRecording = async () => {
-    if (loading || recording) return
+    if (loading || recorderRef.current || microphonePending.current) return
+    microphonePending.current = true
+    setPreparingRecording(true)
     setError(null)
     let stream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      })
+      if (!mounted.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
       const mr = new MediaRecorder(stream)
       const chunks = []
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data)
       }
       mr.onstop = async () => {
+        clearTimeout(recorderTimer.current)
+        stream.getTracks().forEach((track) => track.stop())
+        if (!mounted.current) return
+        setRecording(false)
+        setPreparingRecording(true)
         try {
           const recordedBlob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' })
           const wavBlob = await blobToWavFile(recordedBlob)
           const wavFile = new File([wavBlob], `recording_${Date.now()}.wav`, { type: 'audio/wav' })
-          await validateFile(wavFile)
+          if (mounted.current) validateFile(wavFile)
         } catch (recordingError) {
-          setError('Could not convert microphone recording to WAV.')
+          if (mounted.current) setError(recordingError.message || 'Could not read the recording.')
+        } finally {
+          recorderRef.current = null
+          if (mounted.current) setPreparingRecording(false)
         }
       }
       mr.start()
       recorderRef.current = mr
-      setMediaRecorder(mr)
+      recorderTimer.current = setTimeout(() => {
+        if (mr.state === 'recording') mr.stop()
+      }, 10000)
       setRecording(true)
     } catch (err) {
       stream?.getTracks().forEach((track) => track.stop())
-      setError('Microphone error.')
+      if (mounted.current)
+        setError('Microphone unavailable. Check browser permissions or upload an audio file.')
+    } finally {
+      microphonePending.current = false
+      if (mounted.current) setPreparingRecording(false)
     }
   }
 
   const stopRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.stop()
-      setRecording(false)
-      mediaRecorder.stream.getTracks().forEach((t) => t.stop())
+    const recorder = recorderRef.current
+    if (recorder?.state === 'recording') {
+      recorder.stop()
     }
   }
 
   const handlePredict = async () => {
-    if (!file || loading) return
+    if (!file || loading || recorderRef.current || microphonePending.current) return
     setLoading(true)
     setError(null)
     setResult(null)
@@ -242,6 +269,7 @@ export function useDiagnosticSession() {
     previewUrl,
     fileInputRef,
     recording,
+    preparingRecording,
     scanProgress,
     isPlaying,
     statusMsg,
