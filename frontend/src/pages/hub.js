@@ -65,6 +65,7 @@ export default function CarHub() {
       </Head>
       <nav>
         <Link href="/">← Audio diagnosis</Link>
+        <Link href="/dashboard">Car Care workspace</Link>
         <span>Development preview · Ethiopia</span>
       </nav>
       <header>
